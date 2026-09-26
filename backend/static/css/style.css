@@ -1,0 +1,21 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: #eef4f8; color: #16324f; }
+header { background: #123f63; color: white; padding: 28px 6%; }
+header h1 { margin: 0; }
+.card { background: white; max-width: 1050px; margin: 24px auto; padding: 24px; border-radius: 14px; box-shadow: 0 4px 18px #0001; }
+.hidden { display: none !important; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+form { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+input, button { padding: 11px 13px; border-radius: 8px; border: 1px solid #bdc9d4; }
+button { background: #1769aa; color: white; border: 0; cursor: pointer; }
+.secondary { background: #52677a; }
+.stats { display: flex; gap: 16px; margin: 16px 0; }
+.stats div { background: #e9f5ff; padding: 16px; border-radius: 10px; min-width: 150px; }
+.stats strong, .stats span { display: block; }
+.stats strong { font-size: 1.5rem; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px; border-bottom: 1px solid #d8e0e7; text-align: left; }
+.tableWrap { overflow: auto; }
+.hint { color: #657789; font-size: .9rem; }
+td button { margin-right: 6px; padding: 7px 10px; }
+@media (max-width: 700px) { .card { margin: 12px; } .stats { flex-direction: column; } }

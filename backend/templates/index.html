@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Creator Platform</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header>
+  <h1>Creator Platform</h1>
+  <p>Creator Management Dashboard</p>
+</header>
+
+<main>
+  <section id="loginCard" class="card">
+    <h2>Login</h2>
+    <p class="hint">Local lab account: admin / ChangeMe123!</p>
+    <form id="loginForm">
+      <input id="username" value="admin" placeholder="Username" required>
+      <input id="password" type="password" placeholder="Password" required>
+      <button>Login</button>
+    </form>
+    <p id="loginMessage"></p>
+  </section>
+
+  <section id="appCard" class="card hidden">
+    <div class="row">
+      <h2>Creators</h2>
+      <button id="logoutBtn" class="secondary">Logout</button>
+    </div>
+
+    <div class="stats">
+      <div><strong id="creatorCount">0</strong><span>Creators</span></div>
+      <div><strong id="followerCount">0</strong><span>Total Followers</span></div>
+    </div>
+
+    <form id="creatorForm">
+      <input type="hidden" id="creatorId">
+      <input id="name" placeholder="Creator name" required>
+      <input id="platform" placeholder="Platform" required>
+      <input id="followers" type="number" min="0" placeholder="Followers" required>
+      <button id="saveBtn">Add Creator</button>
+      <button type="button" id="cancelBtn" class="secondary hidden">Cancel</button>
+    </form>
+
+    <p id="message"></p>
+
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Platform</th><th>Followers</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="creatorRows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
