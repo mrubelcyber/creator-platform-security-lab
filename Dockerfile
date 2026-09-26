@@ -1,0 +1,9 @@
+FROM python:3.14-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend ./backend
+RUN mkdir -p database logs
+ENV PYTHONUNBUFFERED=1
+EXPOSE 5000
+CMD ["python", "-m", "backend.app"]
