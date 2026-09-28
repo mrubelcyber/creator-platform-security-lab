@@ -1,0 +1,12 @@
+title = "Creator Platform Gitleaks Configuration"
+
+# Keep Gitleaks built-in secret detection rules.
+[extend]
+useDefault = true
+
+# Creator Platform organization-specific training rule.
+[[rules]]
+id = "creator-training-secret"
+description = "Detect Creator Platform training secrets"
+regex = '''TRAINING_SECRET_[A-Za-z0-9]+'''
+keywords = ["TRAINING_SECRET_"]
