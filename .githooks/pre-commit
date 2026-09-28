@@ -1,0 +1,27 @@
+#!/bin/sh
+
+echo "========================================"
+echo " GITLEAKS PRE-COMMIT SECURITY SCAN"
+echo "========================================"
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "ERROR: Gitleaks is not installed."
+    exit 1
+fi
+
+gitleaks git . --config .gitleaks.toml --pre-commit --staged --redact
+
+RESULT=$?
+
+if [ $RESULT -ne 0 ]; then
+    echo
+    echo "SECURITY GATE: FAILED"
+    echo "Potential secret detected."
+    echo "Commit blocked."
+    exit 1
+fi
+
+echo
+echo "SECURITY GATE: PASSED"
+echo "No secrets detected."
+exit 0
