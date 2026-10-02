@@ -79,3 +79,37 @@ def test_invalid_login():
         assert response.status_code == 401
     finally:
         path.unlink(missing_ok=True)
+
+def test_security_headers_present():
+    client, path = make_client()
+    try:
+        response = client.get("/api/creators")
+
+        assert response.status_code == 200
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["X-Frame-Options"] == "DENY"
+        assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+
+        csp = response.headers["Content-Security-Policy"]
+        assert "default-src 'self'" in csp
+        assert "object-src 'none'" in csp
+        assert "frame-ancestors 'none'" in csp
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_security_headers_present_on_error_response():
+    client, path = make_client()
+    try:
+        response = client.post(
+            "/api/creators",
+            json={"name": "Unauthorized", "platform": "Lab", "followers": 100}
+        )
+
+        assert response.status_code == 401
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["X-Frame-Options"] == "DENY"
+        assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+        assert "default-src 'self'" in response.headers["Content-Security-Policy"]
+    finally:
+        path.unlink(missing_ok=True)
