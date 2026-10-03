@@ -10,6 +10,26 @@ variable "github_branch" {
   default     = "main"
 }
 
+variable "github_owner_id" {
+  description = "Immutable GitHub account ID of the repo owner"
+  type        = string
+  default     = "332564141"
+}
+
+variable "github_repo_id" {
+  description = "Immutable GitHub repository ID"
+  type        = string
+  default     = "1389299844"
+}
+
+locals {
+  # GitHub's subject format with immutable IDs (seen in CloudTrail):
+  # repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/<branch>
+  github_owner = split("/", var.github_repo)[0]
+  github_name  = split("/", var.github_repo)[1]
+  github_sub   = "repo:${local.github_owner}@${var.github_owner_id}/${local.github_name}@${var.github_repo_id}:ref:refs/heads/${var.github_branch}"
+}
+
 # GitHub's OIDC identity provider (free)
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
@@ -33,7 +53,7 @@ data "aws_iam_policy_document" "ci_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/${var.github_branch}"]
+      values   = [local.github_sub]
     }
   }
 }
