@@ -1,0 +1,32 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AssumeAdminRoleOnly",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::998493219212:role/cp-admin-role"
+    },
+    {
+      "Sid": "ManageOwnLoginAndMFA",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser", "iam:ChangePassword", "iam:GetLoginProfile",
+        "iam:ListMFADevices", "iam:EnableMFADevice", "iam:ResyncMFADevice"
+      ],
+      "Resource": "arn:aws:iam::*:user/${aws:username}"
+    },
+    {
+      "Sid": "CreateOwnVirtualMFA",
+      "Effect": "Allow",
+      "Action": "iam:CreateVirtualMFADevice",
+      "Resource": "arn:aws:iam::*:mfa/${aws:username}"
+    },
+    {
+      "Sid": "ReadAccountBasics",
+      "Effect": "Allow",
+      "Action": ["iam:ListVirtualMFADevices", "iam:GetAccountPasswordPolicy", "iam:GetAccountSummary"],
+      "Resource": "*"
+    }
+  ]
+}

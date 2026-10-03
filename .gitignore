@@ -13,3 +13,5 @@ logs/*.log
 zap-reports/
 container-logs/
 logs/alerts.json
+*.tfstate*
+*.tfplan
