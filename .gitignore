@@ -11,3 +11,5 @@ logs/*.log
 *.tfstate
 *.tfstate.*
 zap-reports/
+container-logs/
+logs/alerts.json

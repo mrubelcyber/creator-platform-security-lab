@@ -2,11 +2,17 @@ import logging
 import os
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request, session
+from flask import Flask, g, jsonify, render_template, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.database import get_connection, init_db
 from backend.models import creator_to_dict, validate_creator
+from backend.security_log import (
+    configure_security_log,
+    log_unrecorded_client_error,
+    security_event,
+    start_request,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -16,8 +22,14 @@ def create_app(test_config=None):
         SECRET_KEY=os.environ.get("FLASK_SECRET_KEY", "local-lab-only-change-me"),
         DATABASE=str(BASE_DIR / "database" / "creator.db"),
     )
+    @app.before_request
+    def assign_request_id():
+        start_request()
+
     @app.after_request
     def add_security_headers(response):
+        log_unrecorded_client_error(response)
+        response.headers["X-Request-ID"] = g.get("request_id", "")
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self'; "
@@ -40,8 +52,9 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
 
-    log_dir = BASE_DIR / "logs"
-    log_dir.mkdir(exist_ok=True)
+    log_dir = Path(os.environ.get("LOG_DIR", BASE_DIR / "logs"))
+    log_dir.mkdir(parents=True, exist_ok=True)
+    configure_security_log(log_dir, app.testing)
 
     if not app.testing:
         handler = logging.FileHandler(log_dir / "application.log")
@@ -100,6 +113,8 @@ def create_app(test_config=None):
         return get_connection(app.config["DATABASE"])
 
     def log_event(event):
+        # CWE-117: never let user input start a new line in the activity log
+        event = event.replace("\r", "\\r").replace("\n", "\\n")
         connection = db()
         connection.execute("INSERT INTO activity_logs (event) VALUES (?)", (event,))
         connection.commit()
@@ -114,6 +129,8 @@ def create_app(test_config=None):
         if not row:
             return None, (jsonify(error="Creator not found"), 404)
         if row["owner_id"] != session.get("user_id"):
+            security_event("authz.denied", "denied", status=403,
+                           action=action, creator_id=creator_id)
             log_event(
                 f"Authorization denied action={action} creator_id={creator_id} "
                 f"user={session.get('username')}"
@@ -142,11 +159,15 @@ def create_app(test_config=None):
         connection.close()
 
         if not user or not check_password_hash(user["password_hash"], password):
+            security_event("auth.login", "failure", status=401,
+                           target_user=username or "blank",
+                           reason="unknown_user" if not user else "bad_password")
             log_event(f"Failed login user={username or 'blank'}")
             return jsonify(error="Invalid username or password"), 401
 
         session["user_id"] = user["id"]
         session["username"] = username
+        security_event("auth.login", "success", user=username)
         log_event(f"Login succeeded user={username}")
         return jsonify(message="Login successful", username=username)
 
@@ -154,6 +175,7 @@ def create_app(test_config=None):
     def logout():
         username = session.get("username", "unknown")
         session.clear()
+        security_event("auth.logout", "success", user=username)
         log_event(f"Logout user={username}")
         return jsonify(message="Logged out")
 
@@ -263,6 +285,7 @@ def create_app(test_config=None):
         if not session.get("user_id"):
             return jsonify(error="Authentication required"), 401
 
+        security_event("audit.logs_read", "success")
         connection = db()
         rows = connection.execute(
             "SELECT id, event, created_at FROM activity_logs "
