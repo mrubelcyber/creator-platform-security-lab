@@ -1,15 +1,15 @@
-def login(page, base_url):
+def login(page, base_url, admin_password):
     page.goto(base_url)
 
     page.locator("#username").fill("admin")
-    page.locator("#password").fill("ChangeMe123!")
+    page.locator("#password").fill(admin_password)
     page.locator("#loginForm button").click()
 
     page.wait_for_selector("#appCard:not(.hidden)")
 
 
-def test_creator_crud(page, base_url):
-    login(page, base_url)
+def test_creator_crud(page, base_url, admin_password):
+    login(page, base_url, admin_password)
 
     # -------------------------
     # CREATE

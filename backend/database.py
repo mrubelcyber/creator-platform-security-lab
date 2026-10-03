@@ -25,7 +25,8 @@ def init_db(db_path=None):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             platform TEXT NOT NULL,
-            followers INTEGER NOT NULL DEFAULT 0 CHECK(followers >= 0)
+            followers INTEGER NOT NULL DEFAULT 0 CHECK(followers >= 0),
+            owner_id INTEGER REFERENCES users(id)
         );
 
         CREATE TABLE IF NOT EXISTS activity_logs (
@@ -34,6 +35,12 @@ def init_db(db_path=None):
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """)
+
+    # Lab 5: existing databases were created before owner_id existed.
+    columns = [row["name"] for row in connection.execute("PRAGMA table_info(creators)")]
+    if "owner_id" not in columns:
+        connection.execute("ALTER TABLE creators ADD COLUMN owner_id INTEGER REFERENCES users(id)")
+
     connection.commit()
     connection.close()
     print(f"Database initialized: {path}")

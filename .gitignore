@@ -10,3 +10,4 @@ logs/*.log
 .terraform/
 *.tfstate
 *.tfstate.*
+zap-reports/

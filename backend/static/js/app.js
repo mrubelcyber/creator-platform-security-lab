@@ -25,8 +25,8 @@ function render() {
       <td>${escapeHtml(c.platform)}</td>
       <td>${Number(c.followers).toLocaleString()}</td>
       <td>
-        <button onclick="editCreator(${c.id})">Edit</button>
-        <button class="secondary" onclick="deleteCreator(${c.id})">Delete</button>
+        <button type="button" data-action="edit" data-id="${c.id}">Edit</button>
+        <button type="button" class="secondary" data-action="delete" data-id="${c.id}">Delete</button>
       </td>
     </tr>`).join("");
 
@@ -114,6 +114,15 @@ function resetForm() {
   $("cancelBtn").classList.add("hidden");
   $("message").textContent = "";
 }
+
+// CSP blocks inline onclick handlers, so the table buttons use one delegated listener.
+$("creatorRows").addEventListener("click", event => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  const id = Number(button.dataset.id);
+  if (button.dataset.action === "edit") editCreator(id);
+  if (button.dataset.action === "delete") deleteCreator(id);
+});
 
 $("cancelBtn").addEventListener("click", resetForm);
 $("logoutBtn").addEventListener("click", async () => {

@@ -25,11 +25,16 @@ def create_app(test_config=None):
             "img-src 'self' data:; "
             "object-src 'none'; "
             "base-uri 'self'; "
+            "form-action 'self'; "
             "frame-ancestors 'none'"
         )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
         return response
 
     if test_config:
@@ -52,10 +57,20 @@ def create_app(test_config=None):
     ).fetchone()
 
     if not user:
-        connection.execute(
-            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-            ("admin", generate_password_hash("ChangeMe123!")),
+        initial_password = (
+            app.config.get("ADMIN_INITIAL_PASSWORD")
+            or os.environ.get("ADMIN_INITIAL_PASSWORD")
         )
+        if initial_password:
+            connection.execute(
+                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                ("admin", generate_password_hash(initial_password)),
+            )
+        else:
+            app.logger.warning(
+                "No admin account created: set ADMIN_INITIAL_PASSWORD "
+                "or run scripts/create_user.py admin"
+            )
 
     count = connection.execute(
         "SELECT COUNT(*) AS total FROM creators"
@@ -71,6 +86,13 @@ def create_app(test_config=None):
             ],
         )
 
+    # Lab 5: creators without an owner belong to the seeded admin account.
+    connection.execute(
+        "UPDATE creators SET owner_id = (SELECT id FROM users WHERE username = ?) "
+        "WHERE owner_id IS NULL",
+        ("admin",),
+    )
+
     connection.commit()
     connection.close()
 
@@ -83,6 +105,21 @@ def create_app(test_config=None):
         connection.commit()
         connection.close()
         app.logger.info(event)
+
+    def owned_creator_or_error(connection, creator_id, action):
+        """Object-level authorization: only the owner may change a creator."""
+        row = connection.execute(
+            "SELECT id, owner_id FROM creators WHERE id = ?", (creator_id,)
+        ).fetchone()
+        if not row:
+            return None, (jsonify(error="Creator not found"), 404)
+        if row["owner_id"] != session.get("user_id"):
+            log_event(
+                f"Authorization denied action={action} creator_id={creator_id} "
+                f"user={session.get('username')}"
+            )
+            return None, (jsonify(error="You are not allowed to modify this creator"), 403)
+        return row, None
 
     @app.get("/")
     def index():
@@ -160,8 +197,9 @@ def create_app(test_config=None):
 
         connection = db()
         cursor = connection.execute(
-            "INSERT INTO creators (name, platform, followers) VALUES (?, ?, ?)",
-            (data["name"].strip(), data["platform"].strip(), int(data["followers"])),
+            "INSERT INTO creators (name, platform, followers, owner_id) VALUES (?, ?, ?, ?)",
+            (data["name"].strip(), data["platform"].strip(), int(data["followers"]),
+             session["user_id"]),
         )
         connection.commit()
         row = connection.execute(
@@ -183,13 +221,10 @@ def create_app(test_config=None):
             return jsonify(error=error), 400
 
         connection = db()
-        exists = connection.execute(
-            "SELECT id FROM creators WHERE id = ?", (creator_id,)
-        ).fetchone()
-
-        if not exists:
+        _, denied = owned_creator_or_error(connection, creator_id, "update")
+        if denied:
             connection.close()
-            return jsonify(error="Creator not found"), 404
+            return denied
 
         connection.execute(
             "UPDATE creators SET name=?, platform=?, followers=? WHERE id=?",
@@ -211,13 +246,10 @@ def create_app(test_config=None):
             return jsonify(error="Authentication required"), 401
 
         connection = db()
-        exists = connection.execute(
-            "SELECT id FROM creators WHERE id = ?", (creator_id,)
-        ).fetchone()
-
-        if not exists:
+        _, denied = owned_creator_or_error(connection, creator_id, "delete")
+        if denied:
             connection.close()
-            return jsonify(error="Creator not found"), 404
+            return denied
 
         connection.execute("DELETE FROM creators WHERE id = ?", (creator_id,))
         connection.commit()
