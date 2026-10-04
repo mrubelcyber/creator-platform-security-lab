@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Unit and API Tests
@@ -174,3 +177,33 @@ jobs:
 
       - name: Verify app role least privilege
         run: bash scripts/check_app_role.sh
+
+  network-check:
+    name: Network Terraform check (fmt + lock + validate)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TF_VERSION: "1.16.5"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Terraform (pinned version, checksum verified)
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip"
+          curl -fsSLO "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_SHA256SUMS"
+          grep "terraform_${TF_VERSION}_linux_amd64.zip" "terraform_${TF_VERSION}_SHA256SUMS" | sha256sum -c -
+          unzip -q "terraform_${TF_VERSION}_linux_amd64.zip"
+          sudo mv terraform /usr/local/bin/terraform
+          terraform -version
+
+      - name: Format check
+        run: terraform -chdir=terraform/network fmt -check -diff
+
+      - name: Init (no backend, provider must match lock file)
+        run: terraform -chdir=terraform/network init -backend=false -input=false -lockfile=readonly
+
+      - name: Validate
+        run: terraform -chdir=terraform/network validate
