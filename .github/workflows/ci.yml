@@ -179,7 +179,7 @@ jobs:
         run: bash scripts/check_app_role.sh
 
   network-check:
-    name: Network Terraform check (fmt + lock + validate)
+    name: Network + data protection Terraform check (fmt + lock + validate)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -207,3 +207,12 @@ jobs:
 
       - name: Validate
         run: terraform -chdir=terraform/network validate
+
+      - name: Data protection - format check
+        run: terraform -chdir=terraform/data-protection fmt -check -diff
+
+      - name: Data protection - init (no backend, provider must match lock file)
+        run: terraform -chdir=terraform/data-protection init -backend=false -input=false -lockfile=readonly
+
+      - name: Data protection - validate
+        run: terraform -chdir=terraform/data-protection validate

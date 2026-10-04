@@ -8,9 +8,9 @@ data "aws_caller_identity" "current" {}
 # 1) The notebook: where flow log lines are written
 resource "aws_cloudwatch_log_group" "flow_logs" {
   #checkov:skip=CKV_AWS_338:Lab keeps flow logs 7 days to control cost. Production keeps 365 days or archives to S3.
-  #checkov:skip=CKV_AWS_158:Uses AWS default encryption at rest. Customer managed KMS key is added in Lab 9.
   name              = "/${var.name_prefix}-lab/vpc-flow-logs"
   retention_in_days = var.flow_log_retention_days
+  kms_key_id        = data.aws_kms_alias.data_key.target_key_arn
 
   tags = {
     Name = "${var.name_prefix}-flow-log-group"
@@ -89,4 +89,9 @@ resource "aws_flow_log" "vpc" {
   tags = {
     Name = "${var.name_prefix}-vpc-flow-log"
   }
+}
+
+# Lab 9 (SEC-2549): find our customer managed key by its friendly name
+data "aws_kms_alias" "data_key" {
+  name = "alias/${var.name_prefix}-lab-data-key"
 }
