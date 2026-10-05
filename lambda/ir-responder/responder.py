@@ -50,16 +50,33 @@ def handle_finding(d):
         if DATA_BUCKET in buckets:
             return {**base, **restore_bpa()}
         return {**base, "action": "notify-only", "reason": "bucket not managed by this responder"}
-    akd = (d.get("resource") or {}).get("accessKeyDetails") or {}
-    role, utype = akd.get("userName", ""), akd.get("userType")
+    role, utype = principal_of(d)
     base.update(principal=role, userType=utype)
     if base["severity"] < 7:
         return {**base, "action": "notify-only", "reason": "severity below 7"}
+    if utype == "MultipleActors":
+        return {**base, "action": "notify-only", "reason": "attack sequence with several actors - human decision"}
     if utype != "AssumedRole":
         return {**base, "action": "notify-only", "reason": "principal is not an IAM role"}
     if role in PROTECTED or not role.startswith(ROLE_PREFIX):
         return {**base, "action": "notify-only", "reason": "role not eligible for auto-containment"}
     return {**base, **quarantine_role(role, d.get("id"))}
+
+
+def principal_of(d):
+    """Who acted. Classic findings: resource.accessKeyDetails.
+    Attack-sequence findings (Extended Threat Detection): service.detection.sequence.actors[].user.
+    Lab 11 found this gap with a real Critical finding (fail-safe, but alert context was lost)."""
+    akd = (d.get("resource") or {}).get("accessKeyDetails") or {}
+    if akd.get("userName"):
+        return akd["userName"], akd.get("userType")
+    seq = ((d.get("service") or {}).get("detection") or {}).get("sequence") or {}
+    users = [a.get("user") or {} for a in seq.get("actors") or [] if (a.get("user") or {}).get("name")]
+    if len(users) == 1:
+        return users[0]["name"], users[0].get("type")
+    if len(users) > 1:
+        return ",".join(u["name"] for u in users), "MultipleActors"
+    return "", None
 
 
 def handle_s3_call(d):

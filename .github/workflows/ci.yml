@@ -30,6 +30,9 @@ jobs:
       - name: Run unit/API tests
         run: python -m pytest tests/test_app.py tests/test_detect.py tests/test_ir_responder.py -v
 
+      - name: ShellCheck scripts (warnings and errors fail the build)
+        run: shellcheck -S warning scripts/*.sh
+
   secret-scan:
     name: Gitleaks Secret Scan
     runs-on: ubuntu-24.04
