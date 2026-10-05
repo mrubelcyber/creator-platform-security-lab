@@ -15,3 +15,4 @@ container-logs/
 logs/alerts.json
 *.tfstate*
 *.tfplan
+lambda/ir-responder/build/

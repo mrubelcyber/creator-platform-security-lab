@@ -28,7 +28,7 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
 
       - name: Run unit/API tests
-        run: python -m pytest tests/test_app.py tests/test_detect.py -v
+        run: python -m pytest tests/test_app.py tests/test_detect.py tests/test_ir_responder.py -v
 
   secret-scan:
     name: Gitleaks Secret Scan
@@ -179,7 +179,7 @@ jobs:
         run: bash scripts/check_app_role.sh
 
   network-check:
-    name: Network, data protection + monitoring Terraform check (fmt + lock + validate)
+    name: Network, data protection, monitoring + incident response Terraform check (fmt + lock + validate)
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -225,3 +225,12 @@ jobs:
 
       - name: Monitoring - validate
         run: terraform -chdir=terraform/monitoring validate
+
+      - name: Incident response - format check
+        run: terraform -chdir=terraform/incident-response fmt -check -diff
+
+      - name: Incident response - init (no backend, provider must match lock file)
+        run: terraform -chdir=terraform/incident-response init -backend=false -input=false -lockfile=readonly
+
+      - name: Incident response - validate
+        run: terraform -chdir=terraform/incident-response validate

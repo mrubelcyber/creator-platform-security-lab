@@ -12,6 +12,7 @@ locals {
   admin_role_arn           = "arn:aws:iam::${local.account_id}:role/${var.admin_role_name}"
   flow_log_group_arn       = "arn:aws:logs:${var.aws_region}:${local.account_id}:log-group:/${var.name_prefix}-lab/vpc-flow-logs"
   cloudtrail_log_group_arn = "arn:aws:logs:${var.aws_region}:${local.account_id}:log-group:/${var.name_prefix}-lab/cloudtrail"
+  ir_log_group_arn         = "arn:aws:logs:${var.aws_region}:${local.account_id}:log-group:/${var.name_prefix}-lab/ir-responder"
   trail_arn                = "arn:aws:cloudtrail:${var.aws_region}:${local.account_id}:trail/${var.name_prefix}-lab-trail"
 }
 
@@ -76,7 +77,7 @@ resource "aws_kms_key" "data" {
         Resource = "*"
         Condition = {
           ArnEquals = {
-            "kms:EncryptionContext:aws:logs:arn" = [local.flow_log_group_arn, local.cloudtrail_log_group_arn]
+            "kms:EncryptionContext:aws:logs:arn" = [local.flow_log_group_arn, local.cloudtrail_log_group_arn, local.ir_log_group_arn]
           }
         }
       },
@@ -106,6 +107,13 @@ resource "aws_kms_key" "data" {
         Sid       = "AllowCloudWatchAlarmsForEncryptedSns"
         Effect    = "Allow"
         Principal = { Service = "cloudwatch.amazonaws.com" }
+        Action    = ["kms:Decrypt", "kms:GenerateDataKey*"]
+        Resource  = "*"
+      },
+      {
+        Sid       = "AllowEventBridgeForEncryptedSns"
+        Effect    = "Allow"
+        Principal = { Service = "events.amazonaws.com" }
         Action    = ["kms:Decrypt", "kms:GenerateDataKey*"]
         Resource  = "*"
       },

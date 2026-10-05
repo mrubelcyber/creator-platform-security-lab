@@ -71,6 +71,25 @@ data "aws_iam_policy_document" "alerts_topic" {
       values   = ["false"]
     }
   }
+
+  # Lab 11: only OUR EventBridge rules (cp-lab-*) may publish
+  statement {
+    sid       = "AllowCpLabEventBridgeRulesToPublish"
+    effect    = "Allow"
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.alerts.arn]
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = ["arn:aws:events:${var.aws_region}:${local.account_id}:rule/${var.name_prefix}-lab-*"]
+    }
+  }
 }
 
 resource "aws_sns_topic_policy" "alerts" {
