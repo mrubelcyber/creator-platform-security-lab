@@ -10,9 +10,21 @@ resource "aws_securityhub_account" "this" {
 resource "aws_securityhub_standards_subscription" "fsbp" {
   standards_arn = "arn:${local.partition}:securityhub:${var.aws_region}::standards/aws-foundational-security-best-practices/v/1.0.0"
   depends_on    = [aws_securityhub_account.this]
+
+  # First-time enablement can take longer than the 3m provider default
+  timeouts {
+    create = "15m"
+    delete = "15m"
+  }
 }
 
 resource "aws_securityhub_standards_subscription" "cis" {
   standards_arn = "arn:${local.partition}:securityhub:${var.aws_region}::standards/cis-aws-foundations-benchmark/v/5.0.0"
   depends_on    = [aws_securityhub_account.this]
+
+  # First-time enablement can take longer than the 3m provider default
+  timeouts {
+    create = "15m"
+    delete = "15m"
+  }
 }
