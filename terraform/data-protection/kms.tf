@@ -1,14 +1,18 @@
 # ---------------------------------------------------------------
 # Lab 9 (SEC-2549) - Part A: our own key (customer managed KMS key)
+# Lab 10 (SEC-2550): key policy extended for CloudTrail, the CloudTrail
+# log group and CloudWatch alarms -> encrypted SNS (8 statements).
 # ---------------------------------------------------------------
 
 # Read-only lookup: which AWS account are we in?
 data "aws_caller_identity" "current" {}
 
 locals {
-  account_id         = data.aws_caller_identity.current.account_id
-  admin_role_arn     = "arn:aws:iam::${local.account_id}:role/${var.admin_role_name}"
-  flow_log_group_arn = "arn:aws:logs:${var.aws_region}:${local.account_id}:log-group:/${var.name_prefix}-lab/vpc-flow-logs"
+  account_id               = data.aws_caller_identity.current.account_id
+  admin_role_arn           = "arn:aws:iam::${local.account_id}:role/${var.admin_role_name}"
+  flow_log_group_arn       = "arn:aws:logs:${var.aws_region}:${local.account_id}:log-group:/${var.name_prefix}-lab/vpc-flow-logs"
+  cloudtrail_log_group_arn = "arn:aws:logs:${var.aws_region}:${local.account_id}:log-group:/${var.name_prefix}-lab/cloudtrail"
+  trail_arn                = "arn:aws:cloudtrail:${var.aws_region}:${local.account_id}:trail/${var.name_prefix}-lab-trail"
 }
 
 resource "aws_kms_key" "data" {
@@ -19,7 +23,7 @@ resource "aws_kms_key" "data" {
   rotation_period_in_days  = var.key_rotation_days
   deletion_window_in_days  = var.key_deletion_window_days
 
-  # The guest list - the same 5 rules we pasted in the console (9.2 + 9.3a)
+  # The guest list - Lab 9's 5 rules + 3 Lab 10 rules (same as the console, steps 5b and 6a)
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -61,7 +65,8 @@ resource "aws_kms_key" "data" {
         Condition = { Bool = { "kms:GrantIsForAWSResource" = "true" } }
       },
       {
-        Sid       = "AllowCloudWatchLogsForFlowLogGroupOnly"
+        # Lab 10: was "...FlowLogGroupOnly" - now exactly two named log groups
+        Sid       = "AllowCloudWatchLogsForCpLabLogGroupsOnly"
         Effect    = "Allow"
         Principal = { Service = "logs.${var.aws_region}.amazonaws.com" }
         Action = [
@@ -70,8 +75,39 @@ resource "aws_kms_key" "data" {
         ]
         Resource = "*"
         Condition = {
-          ArnEquals = { "kms:EncryptionContext:aws:logs:arn" = local.flow_log_group_arn }
+          ArnEquals = {
+            "kms:EncryptionContext:aws:logs:arn" = [local.flow_log_group_arn, local.cloudtrail_log_group_arn]
+          }
         }
+      },
+      {
+        # Lab 10: CloudTrail may only CREATE data keys (encrypt) - never Decrypt - and only for our trail
+        Sid       = "AllowCloudTrailEncryptLogs"
+        Effect    = "Allow"
+        Principal = { Service = "cloudtrail.amazonaws.com" }
+        Action    = "kms:GenerateDataKey*"
+        Resource  = "*"
+        Condition = {
+          StringEquals = { "aws:SourceArn" = local.trail_arn }
+          StringLike   = { "kms:EncryptionContext:aws:cloudtrail:arn" = "arn:aws:cloudtrail:*:${local.account_id}:trail/*" }
+        }
+      },
+      {
+        Sid       = "AllowCloudTrailDescribeKey"
+        Effect    = "Allow"
+        Principal = { Service = "cloudtrail.amazonaws.com" }
+        Action    = "kms:DescribeKey"
+        Resource  = "*"
+        Condition = { StringEquals = { "aws:SourceArn" = local.trail_arn } }
+      },
+      {
+        # Lab 10: CloudWatch alarms must use the key to publish to the encrypted SNS topic
+        # (aws/sns cannot be used). Who may publish is gated by the topic policy (alarm:cp-lab-*).
+        Sid       = "AllowCloudWatchAlarmsForEncryptedSns"
+        Effect    = "Allow"
+        Principal = { Service = "cloudwatch.amazonaws.com" }
+        Action    = ["kms:Decrypt", "kms:GenerateDataKey*"]
+        Resource  = "*"
       },
     ]
   })

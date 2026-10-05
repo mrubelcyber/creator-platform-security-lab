@@ -10,7 +10,7 @@ permissions:
 jobs:
   test:
     name: Unit and API Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -32,7 +32,7 @@ jobs:
 
   secret-scan:
     name: Gitleaks Secret Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -59,7 +59,7 @@ jobs:
 
   container-scan:
     name: Trivy Container Vulnerability Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -96,7 +96,7 @@ jobs:
 
   iac-scan:
     name: Checkov Terraform IaC Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -123,7 +123,7 @@ jobs:
 
   dast-scan:
     name: OWASP ZAP Baseline Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -156,7 +156,7 @@ jobs:
 
   iam-check:
     name: IAM least-privilege check (OIDC, no stored keys)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       id-token: write   # lets the job request a GitHub OIDC token
@@ -179,8 +179,8 @@ jobs:
         run: bash scripts/check_app_role.sh
 
   network-check:
-    name: Network + data protection Terraform check (fmt + lock + validate)
-    runs-on: ubuntu-latest
+    name: Network, data protection + monitoring Terraform check (fmt + lock + validate)
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     env:
@@ -216,3 +216,12 @@ jobs:
 
       - name: Data protection - validate
         run: terraform -chdir=terraform/data-protection validate
+
+      - name: Monitoring - format check
+        run: terraform -chdir=terraform/monitoring fmt -check -diff
+
+      - name: Monitoring - init (no backend, provider must match lock file)
+        run: terraform -chdir=terraform/monitoring init -backend=false -input=false -lockfile=readonly
+
+      - name: Monitoring - validate
+        run: terraform -chdir=terraform/monitoring validate

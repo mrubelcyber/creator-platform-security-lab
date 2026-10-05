@@ -11,9 +11,7 @@ resource "aws_s3_account_public_access_block" "account" {
 }
 
 resource "aws_s3_bucket" "data" {
-  #checkov:skip=CKV_AWS_18:Lab bucket holds one test file. S3 access logging / CloudTrail data events are added in Lab 10 (Security Monitoring).
   #checkov:skip=CKV_AWS_144:Single-region lab data; replication doubles cost. Versioning + 30-day lifecycle cover accidental deletes.
-  #checkov:skip=CKV2_AWS_62:No consumer for upload events yet. Event-driven alerts are added in Labs 10-11.
   bucket = "${var.name_prefix}-lab-data-${local.account_id}"
 
   tags = {
@@ -155,4 +153,58 @@ resource "aws_s3_bucket_policy" "data" {
   bucket     = aws_s3_bucket.data.id
   policy     = data.aws_iam_policy_document.data_bucket.json
   depends_on = [aws_s3_bucket_public_access_block.data]
+}
+
+# ---------------------------------------------------------------
+# Lab 10 (SEC-2550): who touched the bucket, and S3 events
+# ---------------------------------------------------------------
+
+# Server access logs -> cp-lab-logs bucket (built in terraform/monitoring).
+# Separate project, so the target is referenced by its fixed name.
+# Apply order: monitoring first (bucket + policy), then this.
+resource "aws_s3_bucket_logging" "data" {
+  bucket        = aws_s3_bucket.data.id
+  target_bucket = "${var.name_prefix}-lab-logs-${local.account_id}"
+  target_prefix = "s3-access/"
+
+  # s3-access/<account>/<region>/<bucket>/YYYY/MM/DD/... (step 4b)
+  target_object_key_format {
+    partitioned_prefix {
+      partition_date_source = "EventTime"
+    }
+  }
+}
+
+# Send all object events to EventBridge (fixes CKV2_AWS_62).
+# No rules yet = no cost; Lab 11 (incident response) adds rules.
+resource "aws_s3_bucket_notification" "data" {
+  bucket      = aws_s3_bucket.data.id
+  eventbridge = true
+}
+
+# ---------------------------------------------------------------
+# Lab 10 (SEC-2550): who touched the bucket, and S3 events
+# ---------------------------------------------------------------
+
+# Server access logs -> cp-lab-logs bucket (built in terraform/monitoring).
+# Separate project, so the target is referenced by its fixed name.
+# Apply order: monitoring first (bucket + policy), then this.
+resource "aws_s3_bucket_logging" "data" {
+  bucket        = aws_s3_bucket.data.id
+  target_bucket = "${var.name_prefix}-lab-logs-${local.account_id}"
+  target_prefix = "s3-access/"
+
+  # s3-access/<account>/<region>/<bucket>/YYYY/MM/DD/... (step 4b)
+  target_object_key_format {
+    partitioned_prefix {
+      partition_date_source = "EventTime"
+    }
+  }
+}
+
+# Send all object events to EventBridge (fixes CKV2_AWS_62).
+# No rules yet = no cost; Lab 11 (incident response) adds rules.
+resource "aws_s3_bucket_notification" "data" {
+  bucket      = aws_s3_bucket.data.id
+  eventbridge = true
 }
