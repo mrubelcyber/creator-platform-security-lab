@@ -81,3 +81,31 @@ def test_policy_change_needs_human(responder):
 def test_unknown_event_is_ignored_silently(responder):
     r = responder.handler({"source": "x", "detail-type": "y", "detail": {}}, None)
     assert r["action"] == "ignored" and responder.sent == []
+
+
+# --- Regression (Lab 11 wrap-up): GuardDuty Extended Threat Detection attack sequences ---
+# Shape modelled on the real AttackSequence:IAM/CompromisedCredentials finding (2026-10-05),
+# as EventBridge delivers it (camelCase): the actor is in service.detection.sequence.actors[].
+def attack_sequence(*actors):
+    return {"source": "aws.guardduty", "detail-type": "GuardDuty Finding", "id": "e3",
+            "detail": {"id": "as1", "type": "AttackSequence:IAM/CompromisedCredentials", "severity": 9,
+                       "resource": {"resourceType": "AttackSequence"},
+                       "service": {"additionalInfo": {}, "detection": {"sequence": {"actors": [
+                           {"id": f"user:AssumedRole:AROAEXAMPLE:{n}", "user": {"name": n, "type": "AssumedRole"}}
+                           for n in actors]}}}}}
+
+
+def test_attack_sequence_admin_is_parsed_and_protected(responder):
+    r = responder.handler(attack_sequence("cp-admin-role"), None)
+    assert r["principal"] == "cp-admin-role"                       # context no longer lost
+    assert r["action"] == "notify-only" and r["reason"] == "role not eligible for auto-containment"
+
+
+def test_attack_sequence_eligible_role_would_be_contained(responder):
+    r = responder.handler(attack_sequence("cp-lab11-ir-test-role"), None)
+    assert r["action"] == "would-quarantine-role" and r["role"] == "cp-lab11-ir-test-role"
+
+
+def test_attack_sequence_with_several_actors_needs_a_human(responder):
+    r = responder.handler(attack_sequence("cp-lab11-a", "cp-lab11-b"), None)
+    assert r["action"] == "notify-only" and "several actors" in r["reason"]
