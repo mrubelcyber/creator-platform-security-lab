@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =====================================================================
 # scripts/lab-cleanup.sh - tear down Creator Platform Labs 8-11 (SEC-2551)
-#   bash scripts/lab-cleanup.sh             DRY RUN (default): discover + show plan, change nothing
-#   bash scripts/lab-cleanup.sh --apply     delete, after you type "yes"
+#   EXPECTED_ACCOUNT=<12-digit id> bash scripts/lab-cleanup.sh          DRY RUN (default), change nothing
+#   EXPECTED_ACCOUNT=<12-digit id> bash scripts/lab-cleanup.sh --apply  delete, after you type "yes"
 #   option: --keep-key                      do not schedule the KMS key for deletion
 # Safety: account/role/region guards; a resource is deleted only if its NAME (cp-lab...)
 # AND its TAGS (Project=creator-platform, Lab in 8-11) match; Labs 0-7 never touched;
@@ -13,7 +13,7 @@
 # shellcheck disable=SC2046,SC2086,SC2016,SC2329
 set -uo pipefail
 
-EXPECTED_ACCOUNT="998493219212"
+EXPECTED_ACCOUNT="${EXPECTED_ACCOUNT:-}"   # your account ID, passed in - never hard-coded
 EXPECTED_ROLE="cp-admin-role"
 REGION="us-east-1"
 LABS_REGEX='^lab-?0?(8|9)$|^lab-?1[01]$'   # lab8 lab-08 lab9 lab-10 lab11 ...
@@ -68,6 +68,7 @@ run() {  # run "<what>" <command...>
 # ---------------------------------------------------------------- pre-flight
 say "Pre-flight - mode: $MODE - log: $LOG"
 command -v jq >/dev/null || { echo "STOP: jq is required"; exit 1; }
+[[ "$EXPECTED_ACCOUNT" =~ ^[0-9]{12}$ ]] || { echo "STOP: set EXPECTED_ACCOUNT, e.g. EXPECTED_ACCOUNT=123456789012 bash $0"; exit 1; }
 ARN=$(aws sts get-caller-identity --query Arn --output text 2>/dev/null) || { echo "STOP: no valid AWS credentials"; exit 1; }
 ACCT=$(cut -d: -f5 <<<"$ARN")
 echo "  identity: $ARN"; echo "  region:   $REGION"
