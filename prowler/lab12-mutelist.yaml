@@ -1,0 +1,49 @@
+# Lab 12 (SEC-2552) - Prowler mutelist: the SAME accepted-risk decisions as the Security Hub
+# automation rules in terraform/cspm/automation_rules.tf. Muted findings are still reported
+# (status MUTED), they just stop counting as open failures. Checks, Regions and Resources are regex.
+# Review every entry at Lab 12 cleanup; production keeps a reason, owner and expiry per entry.
+Mutelist:
+  Accounts:
+    "*":
+      Checks:
+        # Sandbox: services intentionally off (GuardDuty proven in Lab 11; no sensitive data for Macie)
+        "guardduty_is_enabled":
+          Regions: ["*"]
+          Resources: ["*"]
+        "macie_is_enabled":
+          Regions: ["*"]
+          Resources: ["*"]
+        # Root: virtual MFA; root used only for root-only billing/account tasks (verified in CloudTrail)
+        "iam_root_hardware_mfa_enabled":
+          Regions: ["*"]
+          Resources: ["*"]
+        "iam_avoid_root_usage":
+          Regions: ["*"]
+          Resources: ["*"]
+        # cp-admin-role is the deliberate admin role (MFA-only assume, permission boundaries elsewhere)
+        "iam_aws_attached_policy_no_administrative_privileges":
+          Regions: ["*"]
+          Resources: [".*AdministratorAccess.*"]
+        # Single-person lab without an identity provider (production: IAM Identity Center)
+        "iam_check_saml_providers_sts":
+          Regions: ["*"]
+          Resources: ["*"]
+        # False positive for our standard: CIS v5 and NIST SP 800-63B dropped forced password expiry
+        "iam_password_policy_expires_passwords_within_90_days_or_less":
+          Regions: ["*"]
+          Resources: ["*"]
+        # Lab 9 key retired on purpose (KMS.3) - finding ends when the key is deleted
+        "kms_cmk_not_deleted_unintentionally":
+          Regions: ["*"]
+          Resources: ["*"]
+        # Lab-only log buckets and trail: same decision as the Checkov CKV_AWS_18/145 skips
+        "s3_bucket_server_access_logging_enabled|s3_bucket_kms_encryption|s3_bucket_no_mfa_delete|s3_bucket_object_lock":
+          Regions: ["*"]
+          Resources: [".*cp-lab-.*"]
+        "cloudtrail_logs_s3_bucket_access_logging_enabled|cloudtrail_cloudwatch_logging_enabled":
+          Regions: ["*"]
+          Resources: [".*cp-lab-.*"]
+        # CIS 4.x metric filters + alarms: monitoring stack exists in terraform/monitoring (Lab 10), not deployed in Lab 12
+        "cloudwatch_.*":
+          Regions: ["*"]
+          Resources: ["*"]
