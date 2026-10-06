@@ -16,3 +16,4 @@ logs/alerts.json
 *.tfstate*
 *.tfplan
 lambda/ir-responder/build/
+*.tfvars
