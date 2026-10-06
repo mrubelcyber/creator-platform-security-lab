@@ -2,7 +2,9 @@
 # automation rules in terraform/cspm/automation_rules.tf. Muted findings are still reported
 # (status MUTED), they just stop counting as open failures.
 # Rules learned from testing Prowler 5.44.0's own matcher (Step 12.10):
-#   - one exact check name per entry (entries like "a|b" were not applied in the scan)
+#   - one exact check name per entry
+#   - for AWS, Prowler matches Resources against the finding's resource_id (CSV column RESOURCE_NAME),
+#     NOT the ARN - so each entry lists the name pattern (^cp-lab-) and the ARN form for safety
 #   - Prowler rewrites every "*" to ".*" before matching, so never write regex like ".*x.*";
 #     use a plain prefix (matched anywhere with re.search) or a lone "*" for "everything"
 #   - anchor check patterns ("^cloudwatch_") so they cannot hit cloudtrail_cloudwatch_*
@@ -28,7 +30,7 @@ Mutelist:
         # cp-admin-role is the deliberate admin role (MFA-only assume, permission boundaries elsewhere)
         "iam_aws_attached_policy_no_administrative_privileges":
           Regions: ["*"]
-          Resources: ["arn:aws:iam::aws:policy/AdministratorAccess"]
+          Resources: ["^AdministratorAccess$", "arn:aws:iam::aws:policy/AdministratorAccess"]
         # Single-person lab without an identity provider (production: IAM Identity Center)
         "iam_check_saml_providers_sts":
           Regions: ["*"]
@@ -44,23 +46,23 @@ Mutelist:
         # Lab-only log buckets: same decision as the Checkov CKV_AWS_18/145 skips (only cp-lab-* buckets)
         "s3_bucket_server_access_logging_enabled":
           Regions: ["*"]
-          Resources: ["arn:aws:s3:::cp-lab-"]
+          Resources: ["^cp-lab-", "arn:aws:s3:::cp-lab-"]
         "s3_bucket_kms_encryption":
           Regions: ["*"]
-          Resources: ["arn:aws:s3:::cp-lab-"]
+          Resources: ["^cp-lab-", "arn:aws:s3:::cp-lab-"]
         "s3_bucket_no_mfa_delete":
           Regions: ["*"]
-          Resources: ["arn:aws:s3:::cp-lab-"]
+          Resources: ["^cp-lab-", "arn:aws:s3:::cp-lab-"]
         "s3_bucket_object_lock":
           Regions: ["*"]
-          Resources: ["arn:aws:s3:::cp-lab-"]
+          Resources: ["^cp-lab-", "arn:aws:s3:::cp-lab-"]
         # Lab trail: bucket access logging + CloudWatch Logs delivery not deployed (CloudTrail.7 / CloudTrail.5)
         "cloudtrail_logs_s3_bucket_access_logging_enabled":
           Regions: ["*"]
-          Resources: [":trail/cp-lab-"]
+          Resources: ["^cp-lab-", ":trail/cp-lab-"]
         "cloudtrail_cloudwatch_logging_enabled":
           Regions: ["*"]
-          Resources: [":trail/cp-lab-"]
+          Resources: ["^cp-lab-", ":trail/cp-lab-"]
         # CIS 4.x metric filters + alarms: monitoring stack exists in terraform/monitoring (Lab 10), not deployed in Lab 12
         "^cloudwatch_.*":
           Regions: ["*"]

@@ -42,6 +42,15 @@ if [ -n "${MUTELIST:-}" ]; then
 fi
 
 mkdir -p "$OUT"
+# Prowler APPENDS to existing output files with the same name - archive earlier results first
+if compgen -G "$OUT/$NAME*" >/dev/null; then
+  ARCH="$OUT/archive/$NAME-$(date -u +%Y%m%dT%H%M%SZ)"
+  mkdir -p "$ARCH"
+  mv "$OUT/$NAME"* "$ARCH/"
+  mv "$OUT/MANIFEST-$NAME.sha256" "$ARCH/" 2>/dev/null || true
+  mv "$OUT/compliance/$NAME"* "$ARCH/" 2>/dev/null || true
+  echo "previous $NAME results moved to $ARCH"
+fi
 rc=0
 "$VENV/bin/prowler" aws --region "$REGION" --compliance "${FW[@]}" \
   --output-formats csv json-ocsf html --output-directory "$OUT" --output-filename "$NAME" \

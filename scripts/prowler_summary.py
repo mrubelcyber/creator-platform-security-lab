@@ -1,7 +1,7 @@
 """Lab 12 (SEC-2552) - summarize Prowler CSV output (semicolon-separated).
 
-One file:  totals + open failing checks by severity (de-duplicated by FINDING_UID;
-           muted findings counted as MUTED, not FAIL - Prowler 5.44.0 once wrote rows twice).
+One file:  totals + open failing checks by severity. De-duplicated by FINDING_UID keeping the
+           NEWEST row (Prowler appends to an existing file of the same name); muted = MUTED.
 Two files: compare BASELINE AFTER - fixed / still failing / new failing checks.
 Usage: python3 prowler_summary.py RESULTS.csv
        python3 prowler_summary.py BASELINE.csv AFTER.csv
@@ -24,7 +24,7 @@ def load(path):
             sys.exit(f"STOP: column {need} not found in {path}")
     uid, muted = key.get("FINDING_UID"), key.get("MUTED")
     seen, unique = set(), []
-    for r in rows:
+    for r in reversed(rows):  # newest rows are at the end of an appended file
         k = r[uid] if uid else tuple(r.values())
         if k in seen:
             continue
@@ -33,6 +33,9 @@ def load(path):
         if muted and status == "FAIL" and r[muted].strip().lower() in ("true", "1"):
             status = "MUTED"
         unique.append({"status": status, "severity": r[key["SEVERITY"]].lower(), "check": r[key["CHECK_ID"]]})
+    unique.reverse()
+    if len(rows) != len(unique):
+        print(f"WARNING: {path} has {len(rows) - len(unique)} duplicate rows (appended run?) - newest kept")
     return rows, unique
 
 
