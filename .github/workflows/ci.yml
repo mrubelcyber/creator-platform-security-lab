@@ -182,7 +182,7 @@ jobs:
         run: bash scripts/check_app_role.sh
 
   network-check:
-    name: Network, data protection, monitoring + incident response Terraform check (fmt + lock + validate)
+    name: Terraform check - network, data protection, monitoring, incident response, CSPM, posture (fmt + lock + validate)
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -237,3 +237,21 @@ jobs:
 
       - name: Incident response - validate
         run: terraform -chdir=terraform/incident-response validate
+
+      - name: CSPM - format check
+        run: terraform -chdir=terraform/cspm fmt -check -diff
+
+      - name: CSPM - init (no backend, provider must match lock file)
+        run: terraform -chdir=terraform/cspm init -backend=false -input=false -lockfile=readonly
+
+      - name: CSPM - validate
+        run: terraform -chdir=terraform/cspm validate
+
+      - name: Posture - format check
+        run: terraform -chdir=terraform/posture fmt -check -diff
+
+      - name: Posture - init (no backend, provider must match lock file)
+        run: terraform -chdir=terraform/posture init -backend=false -input=false -lockfile=readonly
+
+      - name: Posture - validate
+        run: terraform -chdir=terraform/posture validate

@@ -15,3 +15,21 @@ variable "config_retention_days" {
   type        = number
   default     = 30
 }
+
+variable "retired_kms_key_arns" {
+  description = "KMS keys retired on purpose (PendingDeletion) whose KMS.3 finding is accepted. Set in gitignored terraform.tfvars; [] = rule skipped."
+  type        = list(string)
+  default     = []
+}
+
+variable "retired_kms_key_arns" {
+  description = "KMS keys retired on purpose (PendingDeletion) whose KMS.3 finding is accepted. Set in gitignored terraform.tfvars; [] = rule skipped."
+  type        = list(string)
+  default     = []
+}
+
+variable "retired_kms_key_arns" {
+  description = "KMS keys retired on purpose (PendingDeletion) whose KMS.3 finding is accepted. Set in gitignored terraform.tfvars; [] = rule skipped."
+  type        = list(string)
+  default     = []
+}
