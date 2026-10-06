@@ -6,10 +6,6 @@ output "config_recorder" {
   value = aws_config_configuration_recorder.this.name
 }
 
-output "access_analyzer_arn" {
-  value = aws_accessanalyzer_analyzer.external.arn
-}
-
 output "standards_subscriptions" {
   value = [
     aws_securityhub_standards_subscription.fsbp.id,

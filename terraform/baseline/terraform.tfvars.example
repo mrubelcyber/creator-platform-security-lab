@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Never commit real contact details.
+security_contact = {
+  name  = "<SECURITY_CONTACT_NAME>"
+  title = "Security Engineer"
+  email = "<SECURITY_CONTACT_EMAIL>"
+  phone = "<+1-555-0100>"
+}

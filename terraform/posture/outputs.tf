@@ -9,7 +9,3 @@ output "trail_bucket" {
 output "trail_key_arn" {
   value = aws_kms_key.trail.arn
 }
-
-output "support_role_arn" {
-  value = aws_iam_role.support.arn
-}

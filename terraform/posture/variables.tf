@@ -16,16 +16,6 @@ variable "log_retention_days" {
   default     = 30
 }
 
-variable "security_contact" {
-  description = "Security alternate contact (Account.1 / CIS 1.2). Set in terraform.tfvars, which is gitignored - never commit real values."
-  type = object({
-    name  = string
-    title = string
-    email = string
-    phone = string
-  })
-}
-
 variable "legacy_change_password_users" {
   description = "IAM users with IAMUserChangePassword attached directly (IAM.2 / CIS 1.14). Phase 1: list them so Terraform adopts (imports) the attachment. Phase 2: set [] so Terraform detaches it."
   type        = set(string)
