@@ -111,6 +111,9 @@ jobs:
           category: gitleaks
 
   container-scan:
+    permissions:
+      contents: read
+      security-events: write
     name: Trivy Container Vulnerability Scan
     runs-on: ubuntu-24.04
 
@@ -121,23 +124,15 @@ jobs:
       - name: Build container image
         run: docker build --pull -t creator-platform:ci .
 
-      - name: Install Trivy
+      - name: Install Trivy (pinned version, checksum verified)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg
-
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
-            | gpg --dearmor \
-            | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
-            | sudo tee /etc/apt/sources.list.d/trivy.list
-
-          sudo apt-get update
-          sudo apt-get install -y trivy
-
+          TRIVY_VERSION="0.74.0"
+          TRIVY_SHA256="2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a"
+          curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          echo "${TRIVY_SHA256}  /tmp/trivy.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+          sudo install -m 0755 /tmp/trivy /usr/local/bin/trivy
           trivy --version
-
       - name: Scan container for fixable HIGH/CRITICAL vulnerabilities
         run: |
           trivy image \
@@ -146,6 +141,29 @@ jobs:
             --ignore-unfixed \
             --exit-code 1 \
             creator-platform:ci
+
+      - name: Scan repo - dependencies + Dockerfile (gate on fixable HIGH/CRITICAL)
+        run: trivy fs --scanners vuln,misconfig --misconfig-scanners dockerfile --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
+      - name: Image report for code scanning (fixable MEDIUM+, SARIF)
+        if: always()
+        run: trivy image --scanners vuln --severity MEDIUM,HIGH,CRITICAL --ignore-unfixed --format sarif --output trivy-image.sarif creator-platform:ci
+      - name: Upload Trivy SARIF to code scanning
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+      - name: SBOM of the built image (CycloneDX)
+        if: always()
+        run: trivy image --format cyclonedx --output sbom-image.cdx.json creator-platform:ci
+      - name: Keep the SBOM as a build artifact
+        if: always() && hashFiles('sbom-image.cdx.json') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-image-cyclonedx
+          path: sbom-image.cdx.json
+          retention-days: 30
 
   iac-scan:
     name: Checkov Terraform IaC Scan
