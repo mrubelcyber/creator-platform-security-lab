@@ -1,0 +1,33 @@
+# Lab 13 (SEC-2553): keep every pin current through reviewed PRs.
+# cooldown = same 7-day rule as our tool versions: skip releases younger than a week.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps(actions)"
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "deps(pip)"
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "deps(docker)"

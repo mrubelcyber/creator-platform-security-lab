@@ -1,0 +1,4 @@
+10036	IGNORE	(Server version header: Flask dev server, replaced by production WSGI/reverse proxy - tracked residual risk)
+10049	IGNORE	(Storable and Cacheable Content: public home page and static files, caching is acceptable)
+10109	IGNORE	(Modern Web Application: informational only)
+100001	IGNORE	(Unexpected Content-Type: API scan only - remaining hits are the HTML home page and its static CSS/JS, HTML by design and covered by the baseline scan; API errors are JSON, pinned by test_api_errors_are_json_not_html - SEC-2553)

@@ -5,7 +5,7 @@
       "Sid": "AssumeAdminRoleOnly",
       "Effect": "Allow",
       "Action": "sts:AssumeRole",
-      "Resource": "arn:aws:iam::998493219212:role/cp-admin-role"
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/cp-admin-role"
     },
     {
       "Sid": "ManageOwnLoginAndMFA",
