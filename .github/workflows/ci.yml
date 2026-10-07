@@ -296,7 +296,7 @@ jobs:
         run: bash scripts/check_app_role.sh
 
   network-check:
-    name: Terraform check - network, data protection, monitoring, incident response, CSPM, posture, baseline (fmt + lock + validate)
+    name: Terraform check (fmt + lock + validate)
     runs-on: ubuntu-24.04
     permissions:
       contents: read
