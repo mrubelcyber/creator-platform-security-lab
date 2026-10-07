@@ -82,6 +82,15 @@ paths:
       summary: Delete own creator (session + ownership)
       security: [{sessionCookie: []}]
       responses: {"200": {description: OK}, "401": {description: No session}, "403": {description: Not owner}}
+  /api/search:
+    get:
+      summary: Search creators by name (public, parameterised query)
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: {type: string, maxLength: 100, example: Demo}
+      responses: {"200": {description: OK}}
   /api/logs:
     get:
       summary: Recent activity (session required)

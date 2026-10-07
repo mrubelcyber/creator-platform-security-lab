@@ -210,3 +210,16 @@ def test_api_errors_are_json_not_html():
         assert "PUT" in r405.headers.get("Allow", "")
     finally:
         path.unlink(missing_ok=True)
+
+
+def test_search_is_parameterised():
+    client, path = make_client()
+    try:
+        first = client.get("/api/creators").get_json()[0]["name"]
+        hit = client.get("/api/search", query_string={"q": first[:3]})
+        assert hit.status_code == 200
+        assert any(c["name"] == first for c in hit.get_json())
+        injected = client.get("/api/search", query_string={"q": "' OR '1'='1"})
+        assert injected.status_code == 200 and injected.get_json() == []
+    finally:
+        path.unlink(missing_ok=True)

@@ -295,6 +295,16 @@ def create_app(test_config=None):
         return jsonify([dict(row) for row in rows])
 
 
+    @app.get("/api/search")
+    def search_creators():
+        term = request.args.get("q", "")[:100]
+        connection = db()
+        rows = connection.execute(
+            "SELECT * FROM creators WHERE name LIKE ? ORDER BY id", (f"%{term}%",)
+        ).fetchall()
+        connection.close()
+        return jsonify([creator_to_dict(row) for row in rows])
+
     # Lab 13 (SEC-2553): API errors as JSON, not Flask HTML pages (ZAP 100001)
     @app.errorhandler(404)
     def not_found(_error):
