@@ -1,0 +1,89 @@
+openapi: 3.0.3
+info:
+  title: Creator Platform API
+  version: "1.0"
+  description: Inventory for the ZAP API scan (Lab 13, SEC-2553). Must match backend/app.py - scripts/check_openapi_routes.py enforces it.
+servers:
+  - url: http://127.0.0.1:5000
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+  schemas:
+    Login:
+      type: object
+      required: [username, password]
+      properties:
+        username: {type: string, example: demo-user}
+        password: {type: string, format: password, example: example-only}
+    CreatorInput:
+      type: object
+      required: [name, platform, followers]
+      properties:
+        name: {type: string, example: Demo Creator}
+        platform: {type: string, example: YouTube}
+        followers: {type: integer, minimum: 0, example: 1000}
+  parameters:
+    CreatorId:
+      name: creator_id
+      in: path
+      required: true
+      schema: {type: integer, example: 1}
+paths:
+  /:
+    get:
+      summary: Home page (HTML)
+      responses: {"200": {description: OK}}
+  /health:
+    get:
+      summary: Health check
+      responses: {"200": {description: OK}}
+  /api/login:
+    post:
+      summary: Log in, sets the session cookie
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: "#/components/schemas/Login"}}}
+      responses: {"200": {description: OK}, "401": {description: Invalid credentials}}
+  /api/logout:
+    post:
+      summary: Log out
+      responses: {"200": {description: OK}}
+  /api/session:
+    get:
+      summary: Current session status
+      responses: {"200": {description: OK}}
+  /api/creators:
+    get:
+      summary: List creators (public)
+      responses: {"200": {description: OK}}
+    post:
+      summary: Create a creator (session required)
+      security: [{sessionCookie: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: "#/components/schemas/CreatorInput"}}}
+      responses: {"201": {description: Created}, "400": {description: Invalid}, "401": {description: No session}}
+  /api/creators/{creator_id}:
+    parameters: [{$ref: "#/components/parameters/CreatorId"}]
+    get:
+      summary: Get one creator (public)
+      responses: {"200": {description: OK}, "404": {description: Not found}}
+    put:
+      summary: Update own creator (session + ownership)
+      security: [{sessionCookie: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: "#/components/schemas/CreatorInput"}}}
+      responses: {"200": {description: OK}, "401": {description: No session}, "403": {description: Not owner}}
+    delete:
+      summary: Delete own creator (session + ownership)
+      security: [{sessionCookie: []}]
+      responses: {"200": {description: OK}, "401": {description: No session}, "403": {description: Not owner}}
+  /api/logs:
+    get:
+      summary: Recent activity (session required)
+      security: [{sessionCookie: []}]
+      responses: {"200": {description: OK}, "401": {description: No session}}
