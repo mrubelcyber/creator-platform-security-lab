@@ -211,12 +211,18 @@ jobs:
           category: checkov
 
   dast-scan:
-    name: OWASP ZAP Baseline Scan
+    name: OWASP ZAP Baseline + API Scan
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: API inventory - spec must match every Flask route
+        run: |
+          python3 -c 'import yaml' 2>/dev/null || sudo apt-get install -y python3-yaml
+          python3 scripts/check_openapi_routes.py
 
       - name: Build and start the application container
         run: |
@@ -238,6 +244,27 @@ jobs:
             ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
             zap-baseline.py -t http://127.0.0.1:5000 -c rules.tsv \
             -r zap-baseline.html -J zap-baseline.json
+
+      - name: Run OWASP ZAP API scan (active, from .zap/openapi.yaml)
+        if: always()
+        run: |
+          mkdir -p zap-reports && chmod 777 zap-reports
+          cp .zap/openapi.yaml .zap/api-rules.tsv zap-reports/
+          docker run --rm --network host \
+            -v "$(pwd)/zap-reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
+            zap-api-scan.py -t /zap/wrk/openapi.yaml -f openapi -O http://127.0.0.1:5000 -c api-rules.tsv \
+            -r zap-api.html -J zap-api.json
+
+      - name: Keep ZAP reports as a build artifact
+        if: always() && hashFiles('zap-reports/*.json') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zap-reports
+          path: |
+            zap-reports/*.html
+            zap-reports/*.json
+          retention-days: 30
 
       - name: Show application logs if the scan fails
         if: failure()
