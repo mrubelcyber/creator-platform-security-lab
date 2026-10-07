@@ -196,3 +196,17 @@ def test_owner_can_still_modify_own_creator():
         assert client.delete(f"/api/creators/{creator_id}").status_code == 200
     finally:
         path.unlink(missing_ok=True)
+
+
+def test_api_errors_are_json_not_html():
+    client, path = make_client()
+    try:
+        r404 = client.get("/api/creators/not-a-number")
+        assert r404.status_code == 404
+        assert r404.is_json and r404.get_json()["error"] == "Not found"
+        r405 = client.patch("/api/creators/1")
+        assert r405.status_code == 405
+        assert r405.is_json
+        assert "PUT" in r405.headers.get("Allow", "")
+    finally:
+        path.unlink(missing_ok=True)

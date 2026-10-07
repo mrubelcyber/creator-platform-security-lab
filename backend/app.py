@@ -294,6 +294,21 @@ def create_app(test_config=None):
         connection.close()
         return jsonify([dict(row) for row in rows])
 
+
+    # Lab 13 (SEC-2553): API errors as JSON, not Flask HTML pages (ZAP 100001)
+    @app.errorhandler(404)
+    def not_found(_error):
+        return jsonify(error="Not found"), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(error):
+        allowed = ", ".join(getattr(error, "valid_methods", None) or [])
+        return jsonify(error="Method not allowed"), 405, {"Allow": allowed}
+
+    @app.errorhandler(500)
+    def internal_error(_error):
+        return jsonify(error="Internal server error"), 500
+
     return app
 
 if __name__ == "__main__":
