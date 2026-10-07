@@ -4,7 +4,7 @@
     {
       "Sid": "AllowRubelAdminWithMFA",
       "Effect": "Allow",
-      "Principal": { "AWS": "arn:aws:iam::998493219212:user/rubel-admin" },
+      "Principal": { "AWS": "arn:aws:iam::<ACCOUNT_ID>:user/rubel-admin" },
       "Action": "sts:AssumeRole",
       "Condition": {
         "Bool": { "aws:MultiFactorAuthPresent": "true" },

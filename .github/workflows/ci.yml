@@ -284,7 +284,8 @@ jobs:
       - name: Get short-lived AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
-          role-to-assume: arn:aws:iam::998493219212:role/creator-platform-ci
+          role-to-assume: ${{ secrets.AWS_CI_ROLE_ARN }}
+          mask-aws-account-id: true
           role-session-name: gh-${{ github.run_id }}
           aws-region: us-east-1
 
